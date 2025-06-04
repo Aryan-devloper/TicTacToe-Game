@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic Tac Toe</title>
+     <link rel="stylesheet" href="TicTacToe.css"> 
+    
+</head>
+<body>
+    <div class="container">
+        <h1>Tic Tac Toe</h1>
+        <div id="status" class="status">Player X's turn</div>
+        <div id="board" class="board">
+            <div class="cell" data-index="0"></div>
+            <div class="cell" data-index="1"></div>
+            <div class="cell" data-index="2"></div>
+            <div class="cell" data-index="3"></div>
+            <div class="cell" data-index="4"></div>
+            <div class="cell" data-index="5"></div>
+            <div class="cell" data-index="6"></div>
+            <div class="cell" data-index="7"></div>
+            <div class="cell" data-index="8"></div>
+        </div>
+        <button id="restartButton">Restart Game</button>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const cells = document.querySelectorAll('.cell');
+            const statusDisplay = document.getElementById('status');
+            const restartButton = document.getElementById('restartButton');
+
+            const PLAYER = 'X';
+            const COMPUTER = 'O';
+            let board = ['', '', '', '', '', '', '', '', ''];
+            let currentPlayer = PLAYER;
+            let gameActive = true;
+
+            const winningConditions = [
+                [0, 1, 2], [3, 4, 5], [6, 7, 8],
+                [0, 3, 6], [1, 4, 7], [2, 5, 8],
+                [0, 4, 8], [2, 4, 6]
+            ];
+
+            function handleCellPlayed(clickedCell, clickedCellIndex, playerSymbol) {
+                board[clickedCellIndex] = playerSymbol;
+                clickedCell.textContent = playerSymbol;
+                clickedCell.classList.add(playerSymbol);
+                clickedCell.classList.add('occupied');
+            }
+
+            function checkWin(currentBoard, player) {
+                for (let i = 0; i < winningConditions.length; i++) {
+                    const [a, b, c] = winningConditions[i];
+                    if (currentBoard[a] === player && currentBoard[b] === player && currentBoard[c] === player) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            function isBoardFull(currentBoard) {
+                return currentBoard.every(cell => cell !== '');
+            }
+
+            function minimax(currentBoard, depth, isMaximizingPlayer) {
+                if (checkWin(currentBoard, COMPUTER)) {
+                    return 10 - depth;
+                }
+                if (checkWin(currentBoard, PLAYER)) {
+                    return depth - 10;
+                }
+                if (isBoardFull(currentBoard)) {
+                    return 0;
+                }
+
+                if (isMaximizingPlayer) {
+                    let bestScore = -Infinity;
+                    for (let i = 0; i < currentBoard.length; i++) {
+                        if (currentBoard[i] === '') {
+                            currentBoard[i] = COMPUTER;
+                            let score = minimax(currentBoard, depth + 1, false);
+                            currentBoard[i] = '';
+                            bestScore = Math.max(score, bestScore);
+                        }
+                    }
+                    return bestScore;
+                } else {
+                    let bestScore = Infinity;
+                    for (let i = 0; i < currentBoard.length; i++) {
+                        if (currentBoard[i] === '') {
+                            currentBoard[i] = PLAYER;
+                            let score = minimax(currentBoard, depth + 1, true);
+                            currentBoard[i] = '';
+                            bestScore = Math.min(score, bestScore);
+                        }
+                    }
+                    return bestScore;
+                }
+            }
+
+            function findBestMove(currentBoard) {
+                let bestScore = -Infinity;
+                let move = -1;
+
+                for (let i = 0; i < currentBoard.length; i++) {
+                    if (currentBoard[i] === '') {
+                        currentBoard[i] = COMPUTER;
+                        let score = minimax(currentBoard, 0, false);
+                        currentBoard[i] = '';
+
+                        if (score > bestScore) {
+                            bestScore = score;
+                            move = i;
+                        }
+                    }
+                }
+                return move;
+            }
+
+            function computerMove() {
+                if (!gameActive) return;
+
+                statusDisplay.textContent = `Computer (${COMPUTER}) is thinking...`;
+                cells.forEach(cell => cell.style.pointerEvents = 'none');
+
+                setTimeout(() => {
+                    const bestMoveIndex = findBestMove([...board]);
+
+                    if (bestMoveIndex !== -1) {
+                        const cellToPlay = cells[bestMoveIndex];
+                        handleCellPlayed(cellToPlay, bestMoveIndex, COMPUTER);
+
+                        if (checkWin(board, COMPUTER)) {
+                            statusDisplay.textContent = `Computer (${COMPUTER}) wins!`;
+                            gameActive = false;
+                        } else if (isBoardFull(board)) {
+                            statusDisplay.textContent = "It's a draw!";
+                            gameActive = false;
+                        } else {
+                            currentPlayer = PLAYER;
+                            statusDisplay.textContent = `Player ${PLAYER}'s turn`;
+                        }
+                    }
+                    
+                    if(gameActive) {
+                        cells.forEach(cell => {
+                            if (!cell.classList.contains('occupied')) {
+                                cell.style.pointerEvents = 'auto';
+                            }
+                        });
+                    } else {
+                        cells.forEach(cell => cell.style.pointerEvents = 'none');
+                    }
+                }, 300);
+            }
+
+            function handleCellClick(event) {
+                const clickedCell = event.target;
+                const clickedCellIndex = parseInt(clickedCell.getAttribute('data-index'));
+
+                if (board[clickedCellIndex] !== '' || !gameActive || currentPlayer !== PLAYER) {
+                    return;
+                }
+
+                handleCellPlayed(clickedCell, clickedCellIndex, PLAYER);
+
+                if (checkWin(board, PLAYER)) {
+                    statusDisplay.textContent = `Player ${PLAYER} wins!`;
+                    gameActive = false;
+                    cells.forEach(cell => cell.style.pointerEvents = 'none');
+                } else if (isBoardFull(board)) {
+                    statusDisplay.textContent = "It's a draw!";
+                    gameActive = false;
+                    cells.forEach(cell => cell.style.pointerEvents = 'none');
+                } else {
+                    currentPlayer = COMPUTER;
+                    computerMove();
+                }
+            }
+
+            function restartGame() {
+                board = ['', '', '', '', '', '', '', '', ''];
+                gameActive = true;
+                currentPlayer = PLAYER;
+                statusDisplay.textContent = `Player ${PLAYER}'s turn`;
+
+                cells.forEach(cell => {
+                    cell.textContent = '';
+                    cell.classList.remove(PLAYER, COMPUTER, 'occupied');
+                    cell.style.pointerEvents = 'auto';
+                });
+            }
+
+            cells.forEach(cell => cell.addEventListener('click', handleCellClick));
+            restartButton.addEventListener('click', restartGame);
+
+            statusDisplay.textContent = `Player ${PLAYER}'s turn`;
+        });
+    </script>
+</body>
+</html>
